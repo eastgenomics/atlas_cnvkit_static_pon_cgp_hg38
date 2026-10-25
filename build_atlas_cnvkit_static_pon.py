@@ -241,6 +241,7 @@ def build_app(rows, workdir, destination):
     d = dx_json("describe", job)
     if d["state"] != "done":
         raise RuntimeError(f"{job} state {d['state']}: {d.get('failureMessage')}")
+    os.makedirs(os.path.join(workdir, "out"), exist_ok=True)
     out = {}
     for key, name in (("cn_reference", f"{PON_NAME}.cnn"), ("reference_stats", "reference_stats.tsv"),
                       ("pon_member_sex", "pon_member_sex.tsv")):

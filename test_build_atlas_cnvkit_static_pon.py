@@ -218,3 +218,20 @@ def test_members_table_sorted_and_columns():
     lines = D.members_table(m, ids, sha).splitlines()
     assert lines[0].split("\t") == B.MEMBER_COLUMNS
     assert [l.split("\t")[1] for l in lines[1:]] == ["a", "b"]
+
+
+def test_build_app_creates_out_dir(tmp_path, monkeypatch):
+    """the app outputs are downloaded into <workdir>/out, which must be created first (first proof run failed here)."""
+    calls = []
+    monkeypatch.setattr(B, "sh", lambda cmd, capture=False: "job-1\n" if capture else calls.append(cmd))
+    monkeypatch.setattr(B, "dx_json", lambda *a: {"state": "done", "output": {
+        "cn_reference": {"$dnanexus_link": "file-a"}, "reference_stats": {"$dnanexus_link": "file-b"},
+        "pon_member_sex": {"$dnanexus_link": "file-c"}}})
+
+    def fake_download(pf, path):
+        assert (tmp_path / "out").is_dir()
+        open(path, "w").write("x")
+    monkeypatch.setattr(B, "dx_download", fake_download)
+    job, out = B.build_app(members({"0786_V1": 1}), str(tmp_path), f"{B.PROJECT}:/pon_build/runs/t")
+    assert job == "job-1" and set(out) == {"cn_reference", "reference_stats", "pon_member_sex"}
+    assert out["cn_reference"]["file"] == f"{B.PROJECT}:file-a"
